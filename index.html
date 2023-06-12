@@ -13,6 +13,100 @@
 
 
     <script>
+
+        class ExactCoverState {
+            constructor(M, selection) {
+                this.M = M;
+                this.selection = selection;
+                this.present = [];
+                for (let s of this.selection)
+                    for (let c = 0; c < M[0].length; c++)
+                        if (M[s][c])
+                            this.present.push(c);
+            }
+
+
+            draw() {
+                function colorRow(l) {
+                    return `hsl(${l * 360 / M.length}deg 80% 80%)`;
+                }
+                const SEPV = 42;
+
+                const M = this.M;
+                const draw = SVG().size(M[0].length * 32 + 1, 32);
+                const rectElements = [];
+                for (let c = 0; c < M[0].length; c++) {
+                    let color = "white";
+                    for (let s of this.selection)
+                        if (M[s][c])
+                            color = colorRow(s);
+                    const r = draw.rect(32, 32).move(32 * c, 0).fill(color).stroke("black");
+                    rectElements.push(r);
+                    draw.text(c + 1).move(c * 32 + 12, 4).attr({ textAnchor: "middle" })
+                }
+                return draw;
+            }
+
+
+            getColMin() {
+                let cMin = -1;
+                let min = 10000;
+                for (let c = 0; c < M[0].length; c++)
+                    if (this.present.indexOf(c) < 0) {
+                        let count = 0;
+                        for (let l = 0; l < M.length; l++) {
+                            if (this.isSelectable(l) && M[l][c])
+                                count++;
+                        }
+                        if (count < min) {
+                            min = count;
+                            cMin = c;
+                            alert(cMin + ","+ min)
+                        }
+                    }
+                return cMin;
+            }
+
+
+            isSelectable(l) {
+                for (let c = 0; c < M[0].length; c++) {
+                    if (M[l][c] && this.present.indexOf(c) >= 0)
+                        return false;
+                }
+                return true;
+
+            }
+            getSuccessors() {
+                const M = this.M;
+                const present = [];
+                const suc = [];
+
+                const cMin = this.getColMin();
+                alert(cMin)
+
+                for (let l = 0; l < M.length; l++)
+                    if (this.isSelectable(l) && M[l][cMin]) {
+                        if (this.selection.length == 0)
+                            alert(l)
+                        suc.push(new ExactCoverState(this.M, [...this.selection, l]));
+                    }
+
+                return suc;
+            }
+
+        }
+
+        class ExactCover {
+            constructor(M) {
+                this.M = M;
+            }
+
+            getInitialState() {
+                return new ExactCoverState(this.M, []);
+            }
+        }
+
+
         class NQueenState {
             constructor(n, positions) {
                 this.n = n;
@@ -81,8 +175,15 @@
         }
 
 
-        const P = new NQueenProblem(4);
-
+          const P = new NQueenProblem(4);
+        /*const M = [[1, 0, 0, 1, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 1, 0, 1],
+        [0, 0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 0, 0, 1, 1],
+        [0, 1, 0, 0, 0, 0, 1]];
+        const P = new ExactCover(M);
+*/
 
 
 
