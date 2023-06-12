@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<body>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+    <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+    <script src="https://unpkg.com/tone@14.2.15/build/Tone.js"></script>
+    <script src="https://unpkg.com/@svgdotjs/svg.js"></script>
+
+    <div id="output" style="text-align: center;"></div>
+    <button id="download">Download</button>
+
+
+    <script>
+        class NQueenState {
+            constructor(n, positions) {
+                this.n = n;
+                this.positions = positions;
+            }
+
+            draw() {
+                const n = this.n;
+                const svg = SVG().size(n * 16, n * 16);
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        svg.rect(16, 16).move(i * 16, j * 16).stroke("black").fill("white");
+                    }
+                }
+                for (let i = 0; i < this.positions.length; i++)
+                    svg.text("♛").move(i * 16, this.positions[i] * 16 - 2);
+                return svg;
+            }
+
+
+            isSafe(row, col) {
+
+                // Check this row on left side
+                for (let i = 0; i < col; i++)
+                    if (this.positions[i] == row)
+                        return false;
+
+                // Check upper diagonal on left side
+                let j = col;
+                for (let i = row; i >= 0 && j >= 0; i--, j--)
+                    if (this.positions[j] == i)
+                        return false;
+
+                // Check lower diagonal on left side
+                j = col;
+                for (let i = row; j >= 0 && i < this.n; i++, j--)
+                    if (this.positions[j] == i)
+                        return false;
+
+                return true;
+            }
+
+            getSuccessors() {
+                const s = [];
+                console.log(this.positions)
+                if (this.positions.length >= this.n)
+                    return [];
+                for (let i = 0; i < this.n; i++)
+                    if (this.isSafe(i, this.positions.length))
+                        s.push(new NQueenState(this.n, [...this.positions, i]));
+                return s;
+            }
+        }
+
+
+        class NQueenProblem {
+
+            constructor(n) {
+                this.n = n;
+            }
+
+
+            getInitialState() {
+                return new NQueenState(this.n, []);
+            }
+        }
+
+
+        const P = new NQueenProblem(4);
+
+
+
+
+
+        function createTree(P) {
+            function backtrack(i) {
+                return [i.draw(), i.getSuccessors().map(backtrack)];
+            }
+            return backtrack(P.getInitialState());
+        }
+
+        const tree = createTree(P);
+        drawTree(tree).addTo("#output");
+
+
+        function getWidth(el) { return parseInt(el.node.getAttribute("width")); }
+        function getHeight(el) { return parseInt(el.node.getAttribute("height")); }
+
+        function drawTree(tree) {
+            const svg = SVG();
+
+            const node = tree[0];
+            const sucs = tree[1].map(drawTree);
+
+            console.log(getWidth(node))
+            node.addTo(svg);
+
+            const SEPX = 10;
+            const SEPY = 64;
+            let w = 0;
+            let h = 0;
+            let y1 = getHeight(node);
+            let y2 = getHeight(node) + SEPY;
+            for (const svgS of sucs) {
+                console.log(svgS);
+                svgS.addTo(svg).move(w, y2);
+                w += getWidth(svgS) + SEPX;
+                h = Math.max(h, getHeight(svgS));
+            }
+
+            let x1 = getWidth(node) / 2;
+
+            if (w > getWidth(node)) {
+                x1 = w / 2;
+                node.move(w / 2 - getWidth(node) / 2, 0);
+            }
+
+            w = 0;
+            for (const svgS of sucs) {
+                const x2 = w + getWidth(svgS) / 2;
+                w += getWidth(svgS) + SEPX;
+
+                svg.line(x1, y1, x2, y2).stroke({ color: "black", width: 2 });
+            }
+
+            svg.size(Math.max(w, getWidth(node)), getHeight(node) + (sucs.length == 0 ? 0 : SEPY) + h);
+
+            return svg;
+        }
+
+
+        document.getElementById("download").onclick = () => {
+            download("tree.svg", output.children[0].outerHTML);
+        }
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+    </script>
